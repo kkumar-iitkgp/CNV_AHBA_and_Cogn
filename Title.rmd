@@ -1,0 +1,113 @@
+---
+title: "RefBrainMaps_Glasser3D"
+author: "Kuldeep Kumar"
+date: "2022-09-08"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+
+library(flexdashboard)
+library(ggplot2)
+library(ggseg)
+library(ggseg3d)
+library(ggsegGlasser)
+library(ggsegExtra)
+library(dplyr)
+library(htmlwidgets)
+library(plotly)
+
+pallete_ggseg_schaefer = glasser$palette  
+ggseg_Glasser_region_names <- names(pallete_ggseg_schaefer)
+
+# network information
+#df_ROIs_BrainMaps_NetGroup <- fNetwork_info_and_Brainmaps("glasser")
+#write.csv(df_ROIs_BrainMaps_NetGroup,file = "df_ROIs_BrainMaps_NetGroup_Glasser.csv",row.names = FALSE)
+df_ROIs_BrainMaps_NetGroup <- read.csv(file = "data/df_ROIs_BrainMaps_NetGroup_Glasser.csv")
+ggseg_Glasser_region_to_Network_names <- df_ROIs_BrainMaps_NetGroup[,"ColeAntNet_name"]
+
+label_text_Array <- paste0("ROI:",ggseg_Glasser_region_names,"; Net:",ggseg_Glasser_region_to_Network_names)
+  
+
+```
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+## R Markdown
+
+This is an R Markdown document to make interactive plots for Glasser 3D brain
+
+### plot 1: Glasser parcelation reference map
+
+```{r, echo = FALSE}
+loop_col = 1
+in_title = 'Glasser parcellation: Ref map'
+someData <- tibble(
+  region = ggseg_Glasser_region_names, 
+  ROI_NetName = label_text_Array
+)
+
+p1 <- ggseg3d(someData,atlas="glasser_3d",hemisphere = "left",text = "ROI_NetName") %>% 
+  layout(title = in_title) %>% 
+  remove_axes()
+
+ggplotly(p1)
+
+```
+
+### plot 2: Glasser parcellation to ColeAnt 12 networks
+
+```{r, echo = FALSE}
+loop_col = 2
+in_title = 'Glasser parcellation to ColeAnt 12 networks'
+
+df_ColeAnt12 <- df_ROIs_BrainMaps_NetGroup[,c("regions_ColeAnt12","ColeAntNet_name")]
+
+#---------------------------------------------------------------------------------
+cols_ColeAnt12 <- c("Visual1" = "#0000ff","Visual2"="#6400ff","Somatomotor"="#00ffff","Cingulo-Opercular"="#990099",
+                    "Language"="#009a9a","Default"="#ff0000","Frontoparietal"="#ffff00","Auditory"="#f93dfb",    
+                    "Posterior-Multimodal"="#b15928","Dorsal-attention"="#00ff00","Ventral-Multimodal"="#ff9c00","Orbito-Affective"="#417c00")  
+
+list_ColeAnt12_networks = c("Visual1","Visual2","Somatomotor","Cingulo-Opercular",
+                            "Language","Default","Frontoparietal","Auditory",    
+                            "Posterior-Multimodal","Dorsal-attention","Ventral-Multimodal","Orbito-Affective")  
+
+list_cols_ColeAnt12 <- c("#0000ff","#6400ff","#00ffff","#990099",
+                         "#009a9a","#ff0000","#ffff00","#f93dfb",    
+                         "#b15928","#00ff00","#ff9c00","#417c00")  
+
+#---------------------------------------------------------------------------------
+
+  
+  
+df_ColeAnt12$ColeAntNet_name <- factor(df_ColeAnt12$ColeAntNet_name,levels=list_ColeAnt12_networks)
+array_map_2_cat <- as.numeric(df_ColeAnt12$ColeAntNet_name)
+
+pallete_ggseg_glasser = glasser$palette
+ggseg_region_names <- names(pallete_ggseg_glasser)[c(1:180)] # keep LH only
+
+# create df with estimate and p-value
+temp_df <- as.data.frame(cbind(array_map_2_cat))
+colnames(temp_df) <- c("map_cat")
+
+someData <- tibble(
+  region = ggseg_region_names, 
+  effect = temp_df[,"map_cat"],
+  ROI_NetName = label_text_Array
+)
+
+input_pallete_12net <- colorRampPalette(list_cols_ColeAnt12)(n = 12)
+
+p2 <- ggseg3d(someData,atlas="glasser_3d",hemisphere = "left",colour = 'effect',palette = input_pallete_12net,text = "ROI_NetName") %>% 
+  layout(title = in_title) %>% 
+  remove_axes() 
+
+ggplotly(p2)
+
+```
+
+##Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
